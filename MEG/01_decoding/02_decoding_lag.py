@@ -60,7 +60,7 @@ for idx, s in enumerate(subs):
             for t in range(301):
                 all_decod_perf[idx, ids, t] = np.nanmean(d[ids, :, t, t], axis=0)
 
-imin = int(.15 * 250)
+imin = int(.10 * 250)
 imax = int(imin + 250 * .8)
 
 all_decod_perf = all_decod_perf[:,:,imin:imax]

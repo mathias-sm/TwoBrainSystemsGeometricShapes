@@ -63,6 +63,12 @@ for name, path in conds.items():
                 for t in range(301):
                     all_decod_perf[idx, ids, t] = np.nanmean(d[ids, :, t, t], axis=0)
 
+    avg_dec = np.mean(all_decod_perf, axis=(0,1))
+    where_max_dec = np.where(avg_dec == np.max(avg_dec))[0][0]
+    print("")
+    print(f"================ Dealing with {name} ================")
+    print(f"## Max timeserie has index {where_max_dec}, time {np.round(-.10 + where_max_dec/250, 4)}ms which corresponds to a decoding perf of {np.round(avg_dec[where_max_dec], 3)})")
+
     to_vcorr = np.swapaxes(all_decod_perf, 0, 1).reshape((11,-1))
     rs = vcorrcoef(to_vcorr, weights).reshape((20,301))
     _, clusters, cluster_pv, _ = mne.stats.permutation_cluster_1samp_test(rs, n_permutations=2**13, tail=1)
@@ -77,10 +83,16 @@ for name, path in conds.items():
     axd["b"].axvline(x=1, color='k', linestyle='-', linewidth=.3)
     axd["b"].set_xticks(ticks=[0,1])
     avg_r = np.mean(rs, axis=0)
+    where_max_r = np.where(avg_r == np.max(avg_r))[0][0]
+    print(f"## Max timeserie has index {where_max_r}, time {np.round(-.10 + where_max_r/250, 4)}ms which corresponds to {np.round(avg_r[where_max_r], 3)})")
+
     se_r = np.std(rs, axis=0)/np.sqrt(20)
     nice_fill = np.zeros((301))
     for cl in np.where(cluster_pv < .05)[0]:
         nice_fill[clusters[cl]] = avg_r[clusters[cl]]
+        timings = -.1 + clusters[cl][0]/250
+        print(f"## Cluster from {np.round(np.min(timings),4)}ms to {np.round(np.max(timings), 4)}ms")
+
     axd["b"].fill_between(times, np.zeros((301)), nice_fill, facecolor="k", alpha=.3)
     axd["b"].plot(times, avg_r, color="k")
     axd["b"].fill_between(times, avg_r-se_r, avg_r+se_r, facecolor="k", alpha=0.1)
