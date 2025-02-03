@@ -19,8 +19,8 @@ color = ["#f1a340", "#998ec3"]
 subs = [f"sub-{(i+1):02}" for i in range(20)]
 
 ordered = [
-    "rectangle",
     "square",
+    "rectangle",
     "isoTrapezoid",
     "parallelogram",
     "losange",
@@ -31,50 +31,60 @@ ordered = [
     "trapezoid",
     "random",
 ]
-index_by_alpha = [6, 9, 1, 4, 3, 2, 7, 8, 0, 10, 5]
-pattern_descriptors = {"shape": ordered, "index": index_by_alpha}
 
 def parse_file(fname):
-    behave_diss = pd.read_csv(fname, index_col=0).values
-    tri_behave_diss = behave_diss[np.triu(np.ones_like(behave_diss, dtype=bool), k=1)]
-    zscored = zscore(tri_behave_diss)
-    rdm = RDMs(zscored, pattern_descriptors=pattern_descriptors)
+    """
+    Parse an RDM csv file. I reorder things systematically to ensure that
+    things end up in the same order across different RDMs.
+    """
+    diss_content = pd.read_csv(fname, index_col=0)
+    diss_content = diss_content.reindex(index=ordered, columns=ordered)
+    diss = diss_content.values
+    tri_diss = diss[np.triu(np.ones_like(diss, dtype=bool), k=1)]
+    rdm = rsatoolbox.rdm.RDMs(
+            zscore(tri_diss),
+            pattern_descriptors={"shape": ordered})
+    rdm.sort_by(shape=ordered)
     return rdm
 
-symbolic = parse_file("../csv_competing_models/symbolic_sym_diss_mat.csv")
-IT = parse_file("../csv_competing_models/IT_sym_diss_mat.csv")
-
-model_rdms = symbolic
-model_rdms.append(IT)
-model = ModelWeighted("full", model_rdms)
-
+symbolic = parse_file("../../../derive_theoretical_RDMs/symbolic/symbolic_sym_diss_mat.csv")
+dino_last = parse_file("../../../derive_theoretical_RDMs/more_NNs/dino/last_layer")
+IT = parse_file("../../../derive_theoretical_RDMs/CNN/output/diss_mat_model-cornet_s_layer-IT.csv")
+skel_1 = parse_file("../../../derive_theoretical_RDMs/skeletons/ayzenberg_lourenco_2019.csv")
+skel_2 = parse_file("../../../derive_theoretical_RDMs/skeletons/morfoisse_izard_2021.csv")
+models = [symbolic, dino_last, IT, skel_1, skel_2]
+mnames = ["symbolic", "dino_last", "IT", "skel_1", "skel_2"]
 
 def main(s):
     based = "../../bids_data/derivatives"
     basemne = f"{based}/mne-bids-pipeline/{s}/meg/{s}_task-POGS_"
     basemsm = f"{based}/msm/{s}/meg/{s}_task-POGS_"
 
-    all_rdms = pickle.load(open(f"{basemsm}proc-rsa+crossnobis_rdm.pkl", "rb"))
+    all_rdms = pickle.load(open(f"{basemsm}proc-rsa+crossnobis_rdm_correct_order.pkl", "rb"))
+ 
     times = np.arange(-0.1, 1.1, 0.004)
 
     def model_one_rdm(rdm):
-        fitted = np.zeros((2, len(rdm)))
+        rdm.sort_by(shape=ordered)
+        fitted = np.zeros((len(models), len(rdm)))
         for t, lrdm in enumerate(rdm):
             lrdm.dissimilarities[0] = zscore(lrdm.dissimilarities[0])
-            for im, m in enumerate([symbolic, IT]):
+            for im, m in enumerate(models):
                 fitted[im, t] = rsatoolbox.rdm.compare(m, lrdm, method="corr_cov")[0][0]
         return fitted
 
-    fitted = Parallel(n_jobs=16)(delayed(model_one_rdm)(rdm) for rdm in track(all_rdms))
+    fitted = Parallel(n_jobs=2)(delayed(model_one_rdm)(rdm) for rdm in track(all_rdms))
     fitted = np.array(fitted)
 
     refstc = f"{basemne}shape+eLORETA+hemi"
     refstc = read_source_estimate(refstc)
 
-    for idx_mdl, name in enumerate(["symbolic", "IT"]):
+    for idx_mdl, name in enumerate(mnames):
         this_rtc = refstc.copy()
         this_rtc.data = fitted[:, idx_mdl, :]
-        this_rtc.save(f"{basemsm}rsa+eLORETA+{name}", overwrite=True)
+        this_rtc.save(f"{basemsm}rsa+eLORETA+many+{name}", overwrite=True)
+
+    print(f"Done with {s}")
 
 
 if __name__ == "__main__":

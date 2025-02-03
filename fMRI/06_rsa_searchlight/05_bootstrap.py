@@ -82,7 +82,7 @@ def main(task, theory, pop, estimate="crossnobis", eval="corr_cov", n_boot=10000
     clust_and_signif["clusters"] = ref_out
     clust_and_signif["bootstrap_distribution"] = distribution
     clust_and_signif["clust_pvals"] = pvals
-    fname = f'{base}rsa/sub-average/pop-{pop}_task-{task}_theory-{theory}_bootstraprsa.pkl'
+    fname = f'{base}rsa/sub-average/pop-{pop}_task-{task}_theory-{theory}_method-{estimate}_eval-{eval}_bootstraprsa.pkl'
     pickle.dump(clust_and_signif, open(fname, "wb"))
 
     idxs = [i for i, x in enumerate(ref_cls) if pvals[i] < .5]

@@ -15,6 +15,15 @@ import fire
 from nilearn.glm.second_level import SecondLevelModel
 base = "../bids_dataset/derivatives/"
 
+theories = {
+        "symbolic": "./derive_theoretical_RDMs/symbolic/symbolic_sym_diss_mat.csv",
+        "IT": "./derive_theoretical_RDMs/CNN/output/diss_mat_model-cornet_s_layer-IT.csv",
+        "dino_last": "./derive_theoretical_RDMs/more_NNs/dino/last_layer",
+        "skel_1": "./derive_theoretical_RDMs/skeletons/ayzenberg_lourenco_2019.csv",
+        "skel_2": "./derive_theoretical_RDMs/skeletons/morfoisse_izard_2021.csv"
+}
+theories_names = theories.keys()  # Used to get consistent ordering throughout
+
 def main(task, theory, pop, method="crossnobis", eval="corr_cov"):
 
     sub_folders = None
@@ -51,8 +60,7 @@ def main(task, theory, pop, method="crossnobis", eval="corr_cov"):
 
 
 if __name__ == "__main__":
-    for theory in ["IT", "symbolic"]:
+    for theory in theories_names:
         for pop in ["adults", "kids"]:
             main("geometry", theory, pop)
-        main("geometryHard", theory, "adults")
 

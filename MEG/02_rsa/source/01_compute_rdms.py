@@ -15,9 +15,11 @@ from mne.minimum_norm import (
 
 import fire
 
+from rich.progress import track
+
 ordered = [
-    "rectangle",
     "square",
+    "rectangle",
     "isoTrapezoid",
     "parallelogram",
     "losange",
@@ -28,7 +30,7 @@ ordered = [
     "trapezoid",
     "random",
 ]
-based = "../../../bids_data/derivatives"
+based = "../../bids_data/derivatives"
 
 def main(s):
     basemsm = f"{based}/msm/{s}/meg/{s}_task-POGS_"
@@ -79,8 +81,10 @@ def main(s):
         rdm.sort_by(shape=ordered)
         return rdm
 
-    all_rdms = Parallel(n_jobs=16)(delayed(calc_one_rdm)(c) for c in all_idxs)
-    pickle.dump(all_rdms, open(f"{basemsm}proc-rsa+crossnobis_rdm.pkl", "wb"))
+    # all_rdms = Parallel(n_jobs=3)(delayed(calc_one_rdm)(c) for c in all_idxs)
+    all_rdms = [calc_one_rdm(c) for c in track(all_idxs)]
+    print(f"{basemsm}proc-rsa+crossnobis_rdm_correct_order.pkl")
+    pickle.dump(all_rdms, open(f"{basemsm}proc-rsa+crossnobis_rdm_correct_order.pkl", "wb"))
 
 
 if __name__ == "__main__":

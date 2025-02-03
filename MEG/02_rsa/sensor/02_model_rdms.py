@@ -3,23 +3,12 @@ import numpy as np
 import rsatoolbox
 import pandas as pd
 import copy
-
-import statsmodels.formula.api as smf
-
 import scipy.stats
-
-import pickle
-
 import matplotlib.pyplot as plt
-
 from joblib import Parallel, delayed
-
-from scipy.ndimage import uniform_filter1d
-
-from rsatoolbox.rdm.combine import from_partials
-from rsatoolbox.rdm import compare
-
 import matplotlib
+
+
 font = {'family' : 'calibri', 'size'   : 9}
 plt.rcParams['svg.fonttype'] = 'none'
 matplotlib.rc('font', **font)
@@ -50,24 +39,30 @@ def pretty_plot(ax=None):
 color = ["#f1a340", "#998ec3"]
 subs = [f"sub-{(i+1):02}" for i in range(20)]
 
-ordered = ["rectangle", "square", "isoTrapezoid", "parallelogram", "losange", "kite", "rightKite", "rustedHinge", "hinge", "trapezoid", "random"]
-index_by_alpha = [6, 9, 1, 4, 3, 2, 7, 8, 0, 10, 5]
-pattern_descriptors={'shape': ordered, 'index': index_by_alpha}
+ordered = ["square", "rectangle", "isoTrapezoid", "parallelogram", "losange", "kite", "rightKite", "rustedHinge", "hinge", "trapezoid", "random"]
 
 cm = "crossnobis"
 for smooth in ["smooth", "unsmooth"]:
-    rdms_movie = pickle.load(open(f"./all_rdms/rdms_{cm}_{smooth}.pkl", "rb"))
+    rdms_movie = rsatoolbox.rdm.rdms.load_rdm(f"./all_rdms/rdms_{cm}_{smooth}.pkl")
     times = rdms_movie.subset('subj', ['sub-01']).rdm_descriptors['time']
 
     def parse_file(fname):
-        behave_diss = pd.read_csv(fname, index_col=0).values
-        tri_behave_diss = behave_diss[np.triu(np.ones_like(behave_diss, dtype=bool), k=1)]
-        zscored = scipy.stats.zscore(tri_behave_diss)
-        rdm = rsatoolbox.rdm.RDMs(zscored, pattern_descriptors=pattern_descriptors)
+        """
+        Parse an RDM csv file. I reorder things systematically to ensure that
+        things end up in the same order across different RDMs.
+        """
+        diss_content = pd.read_csv(fname, index_col=0)
+        diss_content = diss_content.reindex(index=ordered, columns=ordered)
+        diss = diss_content.values
+        tri_diss = diss[np.triu(np.ones_like(diss, dtype=bool), k=1)]
+        rdm = rsatoolbox.rdm.RDMs(
+                scipy.stats.zscore(tri_diss),
+                pattern_descriptors={"shape": ordered})
+        rdm.sort_by(shape=ordered)
         return rdm
 
-    symbolic = parse_file("../csv_competing_models/symbolic_sym_diss_mat.csv")
-    IT = parse_file("../csv_competing_models/IT_sym_diss_mat.csv")
+    symbolic = parse_file("../../../derive_theoretical_RDMs/symbolic/symbolic_sym_diss_mat.csv")
+    IT = parse_file("../../../derive_theoretical_RDMs/CNN/output/diss_mat_model-cornet_s_layer-IT.csv")
 
     model_rdms = copy.deepcopy(symbolic)
     model_rdms.append(copy.deepcopy(IT))
@@ -104,12 +99,11 @@ for smooth in ["smooth", "unsmooth"]:
                 n_permutations=2**13,
                 verbose=False,
                 tail=1)
-        print([i, p_values[p_values < .1]])
         p05 = np.nan * np.zeros((301))
         for x in np.where(p_values < .05)[0]:
             filt = [int(x) for x in clusters[x][0]+offset]
             p05[filt] = mu[filt]
-            print((np.array(filt)-offset) * .004)
+            print(f"Model {model_names[i]}; from {np.min((np.array(filt)-offset) * .004)*1000}ms to {np.max((np.array(filt)-offset) * .004)*1000}ms")
         p1 = np.nan * np.zeros((301))
         plt.plot(times, mu, color=color[i], linewidth=0.4)
         plt.plot(times, p05, label=model_names[i], color=color[i])
@@ -119,5 +113,4 @@ for smooth in ["smooth", "unsmooth"]:
     plt.ylabel(f'model-data crossnobis similarity')
     plt.legend()
     pretty_plot()
-    plt.savefig(f"./figs/lm_{cm}_{method}_{smooth}.png", dpi=600)
     plt.savefig(f"./figs/lm_{cm}_{method}_{smooth}.svg")

@@ -210,10 +210,11 @@ d %>%
   Anova(type="II")
 ```
 
-# Perform MDS w/ bootstrap ellipses
+# Perform MDS
 
 Actually there are no more allipses now, as they were hidden under the shape...
-This makes `nrep` less important!
+This makes `nrep` less important, so to make the whole thing faster I don't
+estimate them anymore.
 
 ```{r bootstrapAndPlot}
 # Precompute a hash table of the relevant data per subject
@@ -302,7 +303,7 @@ base_d <-
   mutate(reint = if_else(reference < intruder, intruder, reference)) %>%
   mutate(reference = reref, intruder = reint) %>%
   group_by(ID, reference, intruder) %>%
-  summarize(score = mean((success == "true")/rt), .groups="drop")
+  summarize(score = mean(success == "true")/mean(rt), .groups="drop")
 
 to_rain_plot <-
   base_d %>%

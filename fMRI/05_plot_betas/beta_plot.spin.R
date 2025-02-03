@@ -45,7 +45,6 @@ all_plots <-
   group_map(function(d,k) {
   test <- mean(filter(d, roi_contrast == "shape1")$value)
   if (is.na(test)) {
-    print(test)
     return(NULL)
   }
   pl.betas <-
@@ -91,131 +90,6 @@ lapply(1:length(all_plots),
          }
        }) -> useless
 all_slides %>% print(target="./figures/category_clusters.pptx")
-
-##############
-# Test shape1 ROIs in shape3
-##############
-
-read.csv("../bids_dataset/derivatives/bootstrap_clusters/tables/adults_task-category_ctr-shape1_table_full.csv") %>%
-  filter(pval < .5) %>%
-  mutate(title = paste0(idxs, " (",X,",",Y,",",Z,"); p=", pval)) %>%
-  mutate(roi_id = idxs) %>%
-  filter(roi_id %in% c(3, 4, 24, 28, 29)) %>%  # Manual filtering of the relevant ROIs.
-  inner_join(dbetas, by="roi_id") %>%
-  group_by(roi_id, title) %>%
-  group_map(function(d,k) {
-  test <- mean(filter(d, roi_contrast == "shape1")$value)
-  if (is.na(test)) {
-    print(test)
-    return(NULL)
-  }
-  to.t.test <-
-    d %>%
-    filter(roi_contrast == "shape1") %>%
-    pivot_wider(names_from=name, values_from=value) %>%
-    mutate(ctr_shape3 = shape3 - word,
-           ctr_shape3b = 2*shape3 - (word + number)) %>%
-    group_by(age_group)
-  t.test.shape3  <- mutate(summarize(to.t.test, tidy(t.test(ctr_shape3, alternative="greater"))),  ctr="shape3")
-  t.test.shape3b <- mutate(summarize(to.t.test, tidy(t.test(ctr_shape3b, alternative="greater"))), ctr="shape3b")
-  bind_rows(t.test.shape3, t.test.shape3b) %>%
-    mutate(roi=k$roi_id[[1]]) %>%
-    select(-method, -conf.low, -conf.high, -parameter)
-  }) %>%
-  bind_rows
-
-##############
-# Test shape1 and 3 ROIs in c_numer IPSs
-##############
-
-read.csv("../bids_dataset/derivatives/bootstrap_clusters/tables/adults_task-category_ctr-c_number_table_full.csv") %>%
-  #filter(pval < .5) %>%
-  mutate(title = paste0(idxs, " (",X,",",Y,",",Z,"); p=", pval)) %>%
-  mutate(roi_id = idxs) %>%
-  filter(roi_id %in% c(2, 25)) %>%  # Manual filtering of the relevant ROIs.
-  inner_join(dbetas, by="roi_id") %>%
-  group_by(roi_id, title) %>%
-  group_map(function(d,k) {
-  test <- mean(filter(d, roi_contrast == "c_number")$value)
-  if (is.na(test)) {
-    print(test)
-    return(NULL)
-  }
-  to.t.test <-
-    d %>%
-    filter(roi_contrast == "c_number") %>%
-    pivot_wider(names_from=name, values_from=value) %>%
-    mutate(ctr_shapes = 2*shape1 + 2*shape3 - (face + tool + house + Chinese),
-           ctr_shape1 = 3*shape1 - (face + tool + house),
-           ctr_shape3 = shape3 - word) %>%
-    group_by(age_group)
-  t.test.shapes  <- mutate(summarize(to.t.test, tidy(t.test(ctr_shapes, alternative="greater"))),  ctr="shapes")
-  t.test.shape1  <- mutate(summarize(to.t.test, tidy(t.test(ctr_shape1, alternative="greater"))),  ctr="shape1")
-  t.test.shape3  <- mutate(summarize(to.t.test, tidy(t.test(ctr_shape3, alternative="greater"))),  ctr="shape3")
-  bind_rows(t.test.shapes, t.test.shape1, t.test.shape3) %>%
-    mutate(roi=k$roi_id[[1]]) %>%
-    select(-method, -conf.low, -conf.high, -parameter)
-  }) %>%
-  bind_rows
-
-all_plots <-
-  read.csv("../bids_dataset/derivatives/bootstrap_clusters/tables/adults_task-category_ctr-c_number_table_full.csv") %>%
-  #filter(pval < .5) %>%
-  mutate(title = paste0(idxs, " (",X,",",Y,",",Z,"); p=", pval)) %>%
-  mutate(roi_id = idxs) %>%
-  filter(roi_id %in% c(2, 25)) %>%  # Manual filtering of the relevant ROIs.
-  inner_join(dbetas, by="roi_id") %>%
-  group_by(roi_id, title) %>%
-  group_map(function(d,k) {
-  test <- mean(filter(d, roi_contrast == "c_number")$value)
-  if (is.na(test)) {
-    print(test)
-    return(NULL)
-  }
-  pl.betas <-
-    d %>%
-    filter(roi_contrast == "c_number") %>%
-    mutate(age_group = paste0("Beta in the GLM (", age_group, ")")) %>%
-    mutate(age_group = ordered(age_group, levels=unique(age_group))) %>%
-    group_by(age_group, subject, task, name) %>%
-    summarize(value = mean(value), .groups="keep") %>%
-    group_by(age_group, task, name) %>%
-    summarize(se=sd(value)/sqrt(length(value)),
-              value = mean(value),
-              .groups="keep") %>%
-    ggplot(aes(x = name, y = value)) +
-    new_scale_fill() +
-    geom_bar(aes(fill=name), width=1, stat="identity") +
-    geom_errorbar(aes(ymin=value-se, ymax=value+se), width=0, linewidth=.5) +
-    scale_fill_manual(values=derain_palette) +
-    ylab("") +
-    ggtitle(k$title[[1]]) +
-    facet_wrap(.~age_group, ncol=2) +
-    theme(axis.title.x=element_blank(),
-          axis.text.x=element_blank(),
-          panel.background = element_blank(),
-          axis.ticks.x=element_blank()) +
-    theme(strip.text.x = element_blank()) +
-    theme(strip.background = element_blank()) +
-    theme(panel.grid.major.y = element_blank()) +
-    theme(plot.margin = margin(0,0,6,0))
-  pl.betas
-  })
-
-all.rois.pl <- plot_grid(plotlist=all_plots, ncol=1)
-
-all_slides <<- read_pptx("./blank_A4.pptx")
-lapply(1:length(all_plots),
-       function(idx) {
-         if (!is.null(all_plots[[idx]])) {
-           all_slides <<-
-             all_slides %>%
-              add_slide(layout = "Title and Content", master = "Office Theme") %>%
-              ph_with(dml(ggobj = all_plots[[idx]]), location = ph_location(left = 0.5, top = 3, width = 1.59, height = .95*(5/4)))
-         }
-       }) -> useless
-all_slides %>% print(target="./figures/category_clusters_c_number.pptx")
-
 
 ##############
 # Ventral plots

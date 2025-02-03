@@ -28,10 +28,10 @@ base = "../bids_dataset/derivatives/"
 
 possible_colors = ["#D1790A", "#5A2BA1", "#166629", "#000000"]
 
-def main(pop, task):
+def main(pop, task, method="crossnobis", eval="corr_cov"):
 
     models = ["symbolic", "IT"]
-    paths = {k: f'{base}rsa/sub-average/pop-{pop}_task-{task}_theory-{k}_bootstraprsa.pkl' for k in models}
+    paths = {k: f'{base}rsa/sub-average/pop-{pop}_task-{task}_theory-{k}_method-{method}_eval-{eval}_bootstraprsa.pkl' for k in models}
 
     all_ref_datas = []
     for idxt, t in enumerate(models):
@@ -74,7 +74,7 @@ def main(pop, task):
                display_mode="z",
                vmax=1,
                cut_coords=range(-20,80,10))
-        display.savefig(f"{base}rsa/sub-average/figures/pop-{pop}_task-{task}_slice_model-{names[idxt]}.png", dpi=100)
+        display.savefig(f"{base}rsa/sub-average/figures/pop-{pop}_task-{task}_method-{method}_eval-{eval}_slice_model-{names[idxt]}.png", dpi=100)
 
 
 if __name__ == "__main__":

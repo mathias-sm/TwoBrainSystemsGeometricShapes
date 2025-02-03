@@ -83,7 +83,7 @@ def main(task, sub, ref_task=None):
 
     masks = []
     if task == "category":
-        masks = ["vwfa", "ffa", "tool", "house", "shape1", "shape3", "shape1b", "shape3b"]
+        masks = ["vwfa", "ffa", "tool", "house", "shape1", "shape3", "shape1b", "shape3b", "c_number"]
     elif task == "geometry" and ref_task == "category":
         masks = ["shape1"]
     elif task == "geometryHard" and ref_task == "category":
